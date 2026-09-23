@@ -1,6 +1,7 @@
 import { GoogleGenAI } from '@google/genai';
 import 'dotenv/config';
 import { marked } from 'marked';
+import { Resend } from 'resend';
 
 // 1. Initialize the Gemini Client
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
