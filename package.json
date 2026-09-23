@@ -1,0 +1,26 @@
+{
+  "name": "jira-agent-tracker",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shivinsolt/jira-agent-tracker.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/shivinsolt/jira-agent-tracker/issues"
+  },
+  "homepage": "https://github.com/shivinsolt/jira-agent-tracker#readme",
+  "dependencies": {
+    "@google/genai": "^2.24.0",
+    "@modelcontextprotocol/sdk": "^1.30.1",
+    "dotenv": "^18.0.3"
+  }
+}
