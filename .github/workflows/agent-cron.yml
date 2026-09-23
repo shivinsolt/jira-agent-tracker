@@ -1,0 +1,30 @@
+name: Daily Agentic Tracker
+
+on:
+  schedule:
+        # Runs at 13:30 UTC every day (9:30 AM EDT)
+        - cron: '30 13 * * *'
+  workflow_dispatch: # Allows you to manually trigger it from the GitHub UI for testing
+
+jobs:
+  run-agent:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Execute Weekly Report
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+          JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+          JIRA_URL: ${{ secrets.JIRA_URL }}
+        run: node jira-client.js
