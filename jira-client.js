@@ -67,8 +67,8 @@ async function generateWeeklyReport() {
     `;
 
     // 4. Execute the Gemini Evaluation with Exponential Backoff
-    let retries = 3;
-    let delay = 2000; // Start with a 2-second wait
+    let retries = 5; // Increased to 5 attempts
+    let delay = 10000; // Start with a 10-second wait for severe spikes
     let result;
 
     while (retries > 0) {
@@ -81,29 +81,52 @@ async function generateWeeklyReport() {
           }
         });
         
-        console.log("\n================ REPORT GENERATED ================\n");
-        console.log(result.text);
         break; // Success! Exit the retry loop.
         
       } catch (error) {
         if (error.status === 503 && retries > 1) {
           console.log(`\nGoogle AI is busy. Retrying in ${delay / 1000} seconds...`);
           await new Promise(resolve => setTimeout(resolve, delay));
-          delay *= 2; // Double the wait time for the next attempt
+          delay *= 2; 
           retries--;
         } else {
-          // If it's not a 503, or we ran out of retries, throw the error and crash
-          console.error("Error executing agentic workflow:", error);
+          console.error("\nAPI Error exhausted retries or encountered a fatal error:", error);
           break; 
         }
       }
     }
 
-    console.log("\n================ REPORT GENERATED ================\n");
-    console.log(result.text);
+    // 5. Safely parse and email ONLY if the API succeeded
+    if (result && result.text) {
+      console.log("\n================ REPORT GENERATED ================\n");
+      const htmlReport = marked.parse(result.text);
 
+      const transporter = nodemailer.createTransport({
+        host: "smtp-mail.outlook.com", 
+        port: 587,
+        secure: false, 
+        auth: {
+          user: process.env.OUTLOOK_EMAIL,
+          pass: process.env.OUTLOOK_PASSWORD
+        },
+        tls: { ciphers: 'SSLv3' }
+      });
+
+      await transporter.sendMail({
+        from: process.env.OUTLOOK_EMAIL,
+        to: process.env.OUTLOOK_EMAIL, 
+        subject: "Daily Sync Report: Jira & Strategy Alignment",
+        html: htmlReport
+      });
+      
+      console.log("Report successfully generated and emailed to Outlook!");
+    } else {
+      console.error("\nFailed to generate the report. No email was sent.");
+      process.exit(1); // Fails the GitHub Action so you see the red X in your dashboard
+    }
   } catch (error) {
     console.error("Error executing agentic workflow:", error);
+    process.exit(1);
   }
 }
 
