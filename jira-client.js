@@ -1,6 +1,5 @@
 import { GoogleGenAI } from '@google/genai';
 import 'dotenv/config';
-import nodemailer from 'nodemailer';
 import { marked } from 'marked';
 
 // 1. Initialize the Gemini Client
@@ -99,37 +98,32 @@ async function generateWeeklyReport() {
     }
 
     // 5. Safely parse and email ONLY if the API succeeded
-    if (result && result.text) {
-      console.log("\n================ REPORT GENERATED ================\n");
-      const htmlReport = marked.parse(result.text);
+if (result && result.text) {
+  console.log("\n================ REPORT GENERATED ================\n");
+  const htmlReport = marked.parse(result.text);
+  const resend = new Resend(process.env.RESEND_API_KEY);
 
-      const transporter = nodemailer.createTransport({
-        host: "smtp-mail.outlook.com", 
-        port: 587,
-        secure: false, 
-        auth: {
-          user: process.env.OUTLOOK_EMAIL,
-          pass: process.env.OUTLOOK_PASSWORD
-        },
-        tls: { ciphers: 'SSLv3' }
-      });
-
-      await transporter.sendMail({
-        from: process.env.OUTLOOK_EMAIL,
-        to: process.env.OUTLOOK_EMAIL, 
-        subject: "Daily Sync Report: Jira & Strategy Alignment",
-        html: htmlReport
-      });
-      
-      console.log("Report successfully generated and emailed to Outlook!");
-    } else {
-      console.error("\nFailed to generate the report. No email was sent.");
-      process.exit(1); // Fails the GitHub Action so you see the red X in your dashboard
-    }
+  try {
+    const data = await resend.emails.send({
+      from: 'onboarding@resend.dev', // Must use this exact testing address
+      to: process.env.OUTLOOK_EMAIL, // Must match your Resend sign-up email
+      subject: 'Daily Sync Report: Jira & Strategy Alignment',
+      html: htmlReport
+    });
+    
+    console.log("Report successfully generated and emailed via Resend!", data);
   } catch (error) {
-    console.error("Error executing agentic workflow:", error);
-    process.exit(1);
+    console.error("Failed to send email via Resend:", error);
+    process.exit(1); 
   }
+} else {
+  console.error("\nFailed to generate the report. No email was sent.");
+  process.exit(1);
+}
+} catch (error) {
+console.error("Error executing agentic workflow:", error);
+process.exit(1);
+}
 }
 
 generateWeeklyReport();
