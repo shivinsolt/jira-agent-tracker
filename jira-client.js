@@ -1,5 +1,7 @@
 import { GoogleGenAI } from '@google/genai';
 import 'dotenv/config';
+import nodemailer from 'nodemailer';
+import { marked } from 'marked';
 
 // 1. Initialize the Gemini Client
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
