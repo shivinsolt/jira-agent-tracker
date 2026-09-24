@@ -13,15 +13,35 @@ async function generateWeeklyReport() {
 
   const auth = Buffer.from(`${email}:${apiToken}`).toString('base64');
   
-  // Scoped exactly to your active project board
-  const rawJql = 'project = "PASSP" AND sprint in openSprints()';
-  const jql = encodeURIComponent(rawJql);
-  const url = `${domain}/rest/api/3/search/jql?jql=${jql}&maxResults=50`;
-
   try {
+    console.log("Fetching dynamic weekly goals from STRAT project...");
+    
+    // Fetch the most recent weekly goals task from the STRAT project
+    const goalJql = `project = STRAT AND issuetype = Task ORDER BY created DESC`;
+    const goalResponse = await fetch(`${domain}/rest/api/2/search?jql=${encodeURIComponent(goalJql)}&maxResults=1`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Basic ${auth}`,
+        'Accept': 'application/json'
+      }
+    });
+
+    if (!goalResponse.ok) {
+      throw new Error(`Jira goals HTTP error! status: ${goalResponse.status}`);
+    }
+
+    const goalData = await goalResponse.json();
+    const weeklyGoalDescription = goalData.issues[0]?.fields?.description || "No specific weekly goals found for this cycle.";
+    console.log("Weekly goals successfully retrieved.");
+
+    // Scoped exactly to your active project board
+    const rawJql = 'project = "PASSP" AND sprint in openSprints()';
+    const jql = encodeURIComponent(rawJql);
+    const url = `${domain}/rest/api/3/search/jql?jql=${jql}&maxResults=50`;
+
     console.log("Fetching active sprint data from Jira...");
     
-    // 2. Fetch the Jira Data
+    // 2. Fetch the Jira Sprint Data
     const response = await fetch(url, {
       method: 'GET',
       headers: {
@@ -37,11 +57,16 @@ async function generateWeeklyReport() {
     const jiraData = await response.json();
     console.log(`Successfully fetched ${jiraData.issues?.length || 0} active issues. Analyzing...`);
 
-    // 3. Define the AI System Prompt with strict product guardrails
-    const systemInstruction = `You are an expert AI Product Operations Agent supporting the Chief Product Officer. Your core function is to evaluate active engineering execution against weekly strategic business goals for PaSeva, Mannkaa, and Mat of Life.
+    // 3. Define the AI System Prompt dynamically incorporating the STRAT task goals
+    const systemInstruction = `You are an expert AI Product Operations Agent supporting the Chief Product Officer. Your core function is to evaluate active engineering execution against the agreed-upon weekly strategic goals for PaSeva, Mannkaa, and Mat of Life.
 
-    Your task is to analyze the provided active sprint data (JSON from Jira). Categorize every ticket into one of three buckets:
-    - Direct Alignment: Explicitly advances core product goals.
+    HERE ARE THE EXPLICIT STRATEGIC GOALS FOR THIS WEEK:
+    """
+    ${weeklyGoalDescription}
+    """
+
+    Your task is to analyze the provided active sprint data (JSON from Jira) against these goals. Categorize every ticket into one of three buckets:
+    - Direct Alignment: Explicitly advances the weekly strategic goals.
     - Maintenance/Tech Debt: Necessary operational work.
     - Scope Creep: Consuming resources but actively misaligned with current product definitions.
 
@@ -54,23 +79,14 @@ async function generateWeeklyReport() {
     1. EXECUTIVE SYNC (For CEO Dr. Dev Brar): Focus on strategic OKR progress, weekly goals on track vs at risk, and the percentage of engineering effort mapped to business objectives.
     2. TACTICAL SYNC (For EM Neeraj): Focus on execution velocity across the 3-week sprint, stalled tickets, and explicitly call out Scope Creep tasks draining resources.`;
 
-    // Update these goals weekly before the script runs, or point this to a dynamic document later
-    const weeklyGoals = `
-    CURRENT WEEKLY GOALS:
-    1. Finalize PaSeva automated referral intake workflows.
-    2. Establish operational guidelines for hardware testing of Mat of Life.
-    `;
-
     const prompt = `
-    ${weeklyGoals}
-    
     JIRA SPRINT DATA (JSON):
     ${JSON.stringify(jiraData, null, 2)}
     `;
 
     // 4. Execute the Gemini Evaluation with Exponential Backoff
-    let retries = 5; // Increased to 5 attempts
-    let delay = 10000; // Start with a 10-second wait for severe spikes
+    let retries = 5; 
+    let delay = 10000; 
     let result;
 
     while (retries > 0) {
@@ -83,7 +99,7 @@ async function generateWeeklyReport() {
           }
         });
         
-        break; // Success! Exit the retry loop.
+        break; // Success! Exit retry loop.
         
       } catch (error) {
         if (error.status === 503 && retries > 1) {
@@ -99,32 +115,32 @@ async function generateWeeklyReport() {
     }
 
     // 5. Safely parse and email ONLY if the API succeeded
-if (result && result.text) {
-  console.log("\n================ REPORT GENERATED ================\n");
-  const htmlReport = marked.parse(result.text);
-  const resend = new Resend(process.env.RESEND_API_KEY);
+    if (result && result.text) {
+      console.log("\n================ REPORT GENERATED ================\n");
+      const htmlReport = marked.parse(result.text);
+      const resend = new Resend(process.env.RESEND_API_KEY);
 
-  try {
-    const data = await resend.emails.send({
-      from: 'onboarding@resend.dev', // Must use this exact testing address
-      to: process.env.OUTLOOK_EMAIL, // Must match your Resend sign-up email
-      subject: 'Daily Sync Report: Jira & Strategy Alignment',
-      html: htmlReport
-    });
-    
-    console.log("Report successfully generated and emailed via Resend!", data);
+      try {
+        const data = await resend.emails.send({
+          from: 'onboarding@resend.dev', 
+          to: process.env.OUTLOOK_EMAIL, 
+          subject: 'Daily Sync Report: Jira & Strategy Alignment',
+          html: htmlReport
+        });
+        
+        console.log("Report successfully generated and emailed via Resend!", data);
+      } catch (error) {
+        console.error("Failed to send email via Resend:", error);
+        process.exit(1); 
+      }
+    } else {
+      console.error("\nFailed to generate the report. No email was sent.");
+      process.exit(1);
+    }
   } catch (error) {
-    console.error("Failed to send email via Resend:", error);
-    process.exit(1); 
+    console.error("Error executing agentic workflow:", error);
+    process.exit(1);
   }
-} else {
-  console.error("\nFailed to generate the report. No email was sent.");
-  process.exit(1);
-}
-} catch (error) {
-console.error("Error executing agentic workflow:", error);
-process.exit(1);
-}
 }
 
 generateWeeklyReport();
