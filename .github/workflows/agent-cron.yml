@@ -23,10 +23,12 @@ jobs:
 
       - name: Execute Weekly Report
         env:
-          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
           JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
           JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
           JIRA_URL: ${{ secrets.JIRA_URL }}
-          OUTLOOK_EMAIL: ${{ secrets.OUTLOOK_EMAIL }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          OUTLOOK_EMAIL: ${{ secrets.OUTLOOK_EMAIL }}
+          GOOGLE_GENAI_USE_VERTEXAI: ${{ secrets.GOOGLE_GENAI_USE_VERTEXAI }}
+          GOOGLE_CLOUD_PROJECT: ${{ secrets.GOOGLE_CLOUD_PROJECT }}
+          GOOGLE_CLOUD_LOCATION: ${{ secrets.GOOGLE_CLOUD_LOCATION }}
         run: node jira-client.js

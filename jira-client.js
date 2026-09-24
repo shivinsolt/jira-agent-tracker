@@ -3,12 +3,8 @@ import 'dotenv/config';
 import { marked } from 'marked';
 import { Resend } from 'resend';
 
-// Initialize using Vertex AI mode to route costs to your GCP credits
-const ai = new GoogleGenAI({
-  vertexAI: true,
-  project: 'gen-lang-client-0771841855',
-  location: 'us-central1'
-});
+// Initialize the client using your GCP project context via environment variables
+const ai = new GoogleGenAI();
 
 async function generateWeeklyReport() {
   const email = process.env.JIRA_EMAIL;
