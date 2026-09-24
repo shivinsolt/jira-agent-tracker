@@ -3,8 +3,12 @@ import 'dotenv/config';
 import { marked } from 'marked';
 import { Resend } from 'resend';
 
-// 1. Initialize the Gemini Client
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+// Initialize using Vertex AI mode to route costs to your GCP credits
+const ai = new GoogleGenAI({
+  vertexAI: true,
+  project: 'gen-lang-client-0771841855',
+  location: 'us-central1'
+});
 
 async function generateWeeklyReport() {
   const email = process.env.JIRA_EMAIL;
