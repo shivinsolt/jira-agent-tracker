@@ -16,9 +16,11 @@ async function generateWeeklyReport() {
   try {
     console.log("Fetching dynamic weekly goals from STRAT project...");
     
-    // Fetch the most recent weekly goals task from the STRAT project
-    const goalJql = `project = STRAT AND issuetype = Task ORDER BY created DESC`;
-    const goalResponse = await fetch(`${domain}/rest/api/2/search?jql=${encodeURIComponent(goalJql)}&maxResults=1`, {
+    // Fetch the most recent weekly goals task using the modern API v3 endpoint
+    const goalJql = 'project = STRAT AND issuetype = Task ORDER BY created DESC';
+    const goalUrl = `${domain}/rest/api/3/search/jql?jql=${encodeURIComponent(goalJql)}&maxResults=1`;
+    
+    const goalResponse = await fetch(goalUrl, {
       method: 'GET',
       headers: {
         'Authorization': `Basic ${auth}`,
@@ -31,13 +33,12 @@ async function generateWeeklyReport() {
     }
 
     const goalData = await goalResponse.json();
-    const weeklyGoalDescription = goalData.issues[0]?.fields?.description || "No specific weekly goals found for this cycle.";
+    const weeklyGoalDescription = goalData.issues?.[0]?.fields?.description || "No specific weekly goals found for this cycle.";
     console.log("Weekly goals successfully retrieved.");
 
-    // Scoped exactly to your active project board
+    // Scoped exactly to your active project board using API v3
     const rawJql = 'project = "PASSP" AND sprint in openSprints()';
-    const jql = encodeURIComponent(rawJql);
-    const url = `${domain}/rest/api/3/search/jql?jql=${jql}&maxResults=50`;
+    const url = `${domain}/rest/api/3/search/jql?jql=${encodeURIComponent(rawJql)}&maxResults=50`;
 
     console.log("Fetching active sprint data from Jira...");
     
