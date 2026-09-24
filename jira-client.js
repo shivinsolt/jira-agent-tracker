@@ -93,7 +93,7 @@ async function generateWeeklyReport() {
     while (retries > 0) {
       try {
         result = await ai.models.generateContent({
-          model: 'gemini-3.1-pro-preview',
+          model: 'gemini-3.8-flash',
           contents: prompt,
           config: {
             systemInstruction: systemInstruction,
